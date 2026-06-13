@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天海の城 絵画管理</title>
+<style>
+:root {
+  --navy: #1a2744;
+  --navy-light: #243460;
+  --gold: #c9a84c;
+  --gold-light: #e8c96d;
+  --bg: #f0f2f5;
+  --white: #ffffff;
+  --gray: #6b7280;
+  --gray-light: #e5e7eb;
+  --red: #dc2626;
+  --green: #16a34a;
+  --orange: #ea580c;
+  --purple: #7c3aed;
+  --blue: #2563eb;
+  --text: #1f2937;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+#header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+  color: var(--white); position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+#header-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+#header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; }
+#header h1 span { color: var(--gold); }
+#header-sub { font-size: 0.72rem; opacity: 0.8; margin-top: 2px; }
+
+/* MAIN */
+#main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+
+/* TABS */
+.tab-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+.tab-btn {
+  flex: 1; padding: 10px 8px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;
+  border: 1px solid var(--gray-light); background: white; color: var(--gray); font-weight: 700;
+  text-align: center; transition: all 0.2s;
+}
+.tab-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+.tab-btn .cnt { font-size: 0.7rem; opacity: 0.8; margin-left: 4px; }
+
+/* TOOLBAR */
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.toolbar input[type=search] {
+  flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--gray-light);
+  border-radius: 6px; font-size: 0.85rem;
+}
+.btn {
+  padding: 9px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap;
+}
+.btn-navy { background: var(--navy); color: white; }
+.btn-navy:hover { background: var(--navy-light); }
+.btn-gold { background: var(--gold); color: var(--navy); }
+.btn-gold:hover { background: var(--gold-light); }
+.btn-ghost { background: white; color: var(--navy); border: 1px solid var(--gray-light); }
+.btn-sm { padding: 5px 10px; font-size: 0.72rem; }
+
+/* SUMMARY STRIP */
+.summary-strip { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
+.sum-box {
+  background: white; border-radius: 8px; padding: 8px 14px; box-shadow: var(--shadow);
+  text-align: center; min-width: 78px; flex-shrink: 0; border-top: 3px solid var(--gold);
+}
+.sum-box .n { font-size: 1.3rem; font-weight: 700; }
+.sum-box .l { font-size: 0.68rem; color: var(--gray); margin-top: 2px; }
+
+/* ARTWORK CARD */
+.art-list { display: flex; flex-direction: column; gap: 10px; }
+.art-card {
+  background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 12px 14px; border-left: 4px solid var(--gray-light);
+}
+.art-card.s-good { border-left-color: var(--green); }
+.art-card.s-watch { border-left-color: var(--orange); }
+.art-card.s-damage { border-left-color: var(--red); }
+.art-card.s-repair { border-left-color: var(--purple); }
+.art-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.art-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); }
+.art-no { font-size: 0.7rem; color: var(--gray); font-weight: 400; margin-left: 6px; }
+.art-meta { font-size: 0.74rem; color: var(--gray); margin-top: 4px; line-height: 1.6; }
+.art-meta .sep { margin: 0 6px; color: var(--gray-light); }
+.art-val { font-size: 0.78rem; color: var(--navy); font-weight: 700; margin-top: 4px; }
+
+/* STATUS BUTTONS */
+.status-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.st-btn {
+  padding: 6px 12px; border-radius: 16px; font-size: 0.74rem; font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--gray-light); background: white; color: var(--gray);
+  transition: all 0.15s;
+}
+.st-btn.sel-good { background: var(--green); color: white; border-color: var(--green); }
+.st-btn.sel-watch { background: var(--orange); color: white; border-color: var(--orange); }
+.st-btn.sel-damage { background: var(--red); color: white; border-color: var(--red); }
+.st-btn.sel-repair { background: var(--purple); color: white; border-color: var(--purple); }
+.note-row { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+.note-row input {
+  flex: 1; padding: 6px 10px; border: 1px solid var(--gray-light);
+  border-radius: 6px; font-size: 0.78rem;
+}
+.last-check { font-size: 0.68rem; color: var(--gray); margin-top: 6px; }
+.last-check.never { color: var(--red); }
+
+/* DETAIL TOGGLE */
+.detail-toggle { font-size: 0.72rem; color: var(--blue); cursor: pointer; margin-top: 6px; display: inline-block; }
+.art-detail { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--gray-light); font-size: 0.74rem; color: var(--text); line-height: 1.7; }
+.art-detail.open { display: block; }
+
+/* MODAL */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+  display: none; align-items: center; justify-content: center; padding: 16px;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: white; border-radius: 12px; padding: 20px; width: 100%;
+  max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.modal h3 { font-size: 1rem; color: var(--navy); margin-bottom: 14px; border-bottom: 2px solid var(--gold); padding-bottom: 8px; }
+.form-row { margin-bottom: 10px; }
+.form-row label { display: block; font-size: 0.76rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.form-row input, .form-row select, .form-row textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--gray-light);
+  border-radius: 6px; font-size: 0.85rem; font-family: inherit;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+.empty { text-align: center; color: var(--gray); padding: 30px; font-size: 0.85rem; }
+
+/* CSV PANEL */
+.csv-panel { display:none; background:white; border-radius:8px; padding:14px; box-shadow:var(--shadow); margin-bottom:14px; }
+.csv-panel.open { display:block; }
+.csv-panel textarea { width:100%; min-height:120px; font-family:monospace; font-size:0.75rem; padding:8px; border:1px solid var(--gray-light); border-radius:6px; }
+.csv-panel .hint { font-size:0.72rem; color:var(--gray); margin:8px 0; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-top">
+    <div>
+      <h1>天海の城 <span>絵画管理</span></h1>
+      <div id="header-sub">作品台帳・状態点検</div>
+    </div>
+    <button class="btn btn-gold" onclick="openAdd()">＋ 作品登録</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <div class="summary-strip" id="summary"></div>
+
+  <div class="tab-bar">
+    <div class="tab-btn active" id="tab-display" onclick="switchTab('display')">🖼️ 展示中<span class="cnt" id="cnt-display"></span></div>
+    <div class="tab-btn" id="tab-storage" onclick="switchTab('storage')">📦 倉庫<span class="cnt" id="cnt-storage"></span></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="作品名・作者・番号で検索" oninput="render()">
+    <button class="btn btn-ghost btn-sm" onclick="toggleCsv()">CSV取込/書出</button>
+  </div>
+
+  <div class="csv-panel" id="csv-panel">
+    <div class="hint">
+      ① 書き出し：現在の全作品をCSVで出力します（バックアップや一括編集に）。<br>
+      ② 取り込み：下の欄にCSVを貼り付けて取込。1行目は見出し（作品番号,作品名,作者,技法,サイズ,評価額,取得日,取得元,設置場所,備考）。設置場所は「展示中」または「倉庫」。
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-navy btn-sm" onclick="exportCsv()">CSV書き出し</button>
+      <button class="btn btn-gold btn-sm" onclick="importCsv()">貼り付けて取込</button>
+      <button class="btn btn-sm" style="background:var(--red);color:white" onclick="resetAll()">全データ削除</button>
+    </div>
+    <div style="margin-bottom:10px;padding:10px;background:var(--bg);border-radius:6px">
+      <div style="font-size:0.74rem;font-weight:700;color:var(--navy);margin-bottom:6px">▼ ファイルから直接取り込む（おすすめ・確実）</div>
+      <input type="file" id="csv-file" accept=".csv,text/csv" onchange="importCsvFile(event)" style="font-size:0.78rem">
+    </div>
+    <textarea id="csv-text" placeholder="ここにCSVを貼り付け..."></textarea>
+  </div>
+
+  <div class="art-list" id="art-list"></div>
+
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">作品登録</h3>
+    <input type="hidden" id="f-id">
+    <div class="form-grid">
+      <div class="form-row"><label>作品番号</label><input id="f-no" placeholder="例 P-001"></div>
+      <div class="form-row"><label>設置場所</label><select id="f-place"><option>展示中</option><option>倉庫</option></select></div>
+    </div>
+    <div class="form-row"><label>作品名</label><input id="f-title" placeholder="例 朝の海"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>作者</label><input id="f-artist" placeholder="例 山田太郎"></div>
+      <div class="form-row"><label>技法</label><select id="f-tech">
+        <option>油彩</option><option>水彩</option><option>アクリル</option><option>版画</option>
+        <option>日本画</option><option>素描</option><option>その他</option></select></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>サイズ</label><input id="f-size" placeholder="例 F10 (53×46cm)"></div>
+      <div class="form-row"><label>評価額(円)</label><input id="f-value" type="number" placeholder="例 300000"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>取得日</label><input id="f-date" type="date"></div>
+      <div class="form-row"><label>取得元</label><input id="f-source" placeholder="例 ○○画廊"></div>
+    </div>
+    <div class="form-row"><label>備考</label><textarea id="f-memo" rows="2" placeholder="額装の状態、来歴など"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" id="modal-delete" style="background:var(--red);color:white;display:none;margin-right:auto" onclick="deleteArt()">削除</button>
+      <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-navy" id="modal-save" onclick="saveArt()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== STORAGE =====
+const KEY = 'tenkai_kaiga';
+function loadAll() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } }
+function saveAll(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
+
+// ===== SAMPLE DATA (初回のみ) =====
+function seedIfEmpty() {
+  if (localStorage.getItem(KEY)) return;
+  const sample = [
+    { id:'a1', no:'P-001', title:'朝の海', artist:'川村 海斗', tech:'油彩', size:'F20 (73×60cm)',
+      value:480000, date:'2019-04-12', source:'長崎○○画廊', place:'展示中',
+      memo:'玄関ホール正面に展示。額装良好。', status:'良', statusNote:'', lastCheck:'2026-05-20' },
+    { id:'a2', no:'P-002', title:'西海夕景', artist:'森田 律子', tech:'水彩', size:'F8 (45×38cm)',
+      value:150000, date:'2020-09-03', source:'作家直接購入', place:'展示中',
+      memo:'2階廊下。日差しが当たるため退色注意。', status:'要注意', statusNote:'右下にわずかな退色', lastCheck:'2026-05-20' },
+    { id:'a3', no:'P-003', title:'椿', artist:'大島 信一', tech:'日本画', size:'色紙 (27×24cm)',
+      value:90000, date:'2018-01-20', source:'寄贈（前オーナー）', place:'展示中',
+      memo:'ロビー側壁。', status:'良', statusNote:'', lastCheck:'2026-04-15' },
+    { id:'a4', no:'S-101', title:'港の灯', artist:'川村 海斗', tech:'油彩', size:'F30 (91×72cm)',
+      value:620000, date:'2017-11-08', source:'長崎○○画廊', place:'倉庫',
+      memo:'倉庫A棚。額の角に擦れあり。', status:'損傷', statusNote:'額縁右上角に剥離', lastCheck:'2026-03-10' },
+    { id:'a5', no:'S-102', title:'無題（抽象）', artist:'宮本 あや', tech:'アクリル', size:'M15 (65×50cm)',
+      value:210000, date:'2021-06-30', source:'美術市', place:'倉庫',
+      memo:'倉庫B棚。展示候補。', status:'要修復', statusNote:'キャンバス左端に緩みあり張り直し要', lastCheck:'2026-02-01' },
+  ];
+  saveAll(sample);
+}
+
+// ===== STATE =====
+let currentTab = 'display';
+const STATUSES = [
+  { key:'良',    cls:'good',   sel:'sel-good' },
+  { key:'要注意', cls:'watch',  sel:'sel-watch' },
+  { key:'損傷',   cls:'damage', sel:'sel-damage' },
+  { key:'要修復', cls:'repair', sel:'sel-repair' },
+];
+function statusCls(s){ const f=STATUSES.find(x=>x.key===s); return f?f.cls:''; }
+
+// ===== TABS =====
+function switchTab(t) {
+  currentTab = t;
+  document.getElementById('tab-display').classList.toggle('active', t==='display');
+  document.getElementById('tab-storage').classList.toggle('active', t==='storage');
+  render();
+}
+
+// ===== RENDER =====
+function render() {
+  const all = loadAll();
+  const q = (document.getElementById('search').value||'').trim().toLowerCase();
+  const placeWanted = currentTab==='display' ? '展示中' : '倉庫';
+
+  document.getElementById('cnt-display').textContent = '('+all.filter(a=>a.place==='展示中').length+')';
+  document.getElementById('cnt-storage').textContent = '('+all.filter(a=>a.place==='倉庫').length+')';
+
+  // summary by status (current tab)
+  const inTab = all.filter(a=>a.place===placeWanted);
+  const counts = {};
+  STATUSES.forEach(s=>counts[s.key]=0);
+  inTab.forEach(a=>{ if(counts[a.status]!==undefined) counts[a.status]++; });
+  document.getElementById('summary').innerHTML = STATUSES.map(s=>`
+    <div class="sum-box" style="border-top-color:var(--${s.cls==='good'?'green':s.cls==='watch'?'orange':s.cls==='damage'?'red':'purple'})">
+      <div class="n" style="color:var(--${s.cls==='good'?'green':s.cls==='watch'?'orange':s.cls==='damage'?'red':'purple'})">${counts[s.key]}</div>
+      <div class="l">${s.key}</div>
+    </div>`).join('') +
+    `<div class="sum-box"><div class="n" style="color:var(--navy)">${inTab.length}</div><div class="l">合計</div></div>`;
+
+  let list = inTab;
+  if (q) list = list.filter(a =>
+    (a.title||'').toLowerCase().includes(q) ||
+    (a.artist||'').toLowerCase().includes(q) ||
+    (a.no||'').toLowerCase().includes(q));
+
+  const el = document.getElementById('art-list');
+  if (!list.length) { el.innerHTML = '<div class="empty">該当する作品がありません</div>'; return; }
+
+  list.sort((a,b)=>(a.no||'').localeCompare(b.no||''));
+  el.innerHTML = list.map(a => {
+    const cls = statusCls(a.status);
+    const neverChecked = !a.lastCheck;
+    return `
+    <div class="art-card s-${cls}">
+      <div class="art-head">
+        <div>
+          <span class="art-title">${esc(a.title)||'（無題）'}<span class="art-no">${esc(a.no)||''}</span></span>
+          <div class="art-meta">${esc(a.artist)||'作者不明'}<span class="sep">|</span>${esc(a.tech)||''}<span class="sep">|</span>${esc(a.size)||''}</div>
+          ${a.value?`<div class="art-val">評価額 ¥${Number(a.value).toLocaleString()}</div>`:''}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit('${a.id}')">編集</button>
+      </div>
+
+      <div class="status-row">
+        ${STATUSES.map(s=>`<div class="st-btn ${a.status===s.key?s.sel:''}" onclick="setStatus('${a.id}','${s.key}')">${s.key}</div>`).join('')}
+      </div>
+      <div class="note-row">
+        <input placeholder="状態メモ（一言）" value="${esc(a.statusNote)||''}" onchange="setNote('${a.id}', this.value)">
+      </div>
+      <div class="last-check ${neverChecked?'never':''}">${neverChecked?'未点検':'最終点検 '+a.lastCheck}</div>
+
+      <span class="detail-toggle" onclick="toggleDetail('${a.id}')">詳細を表示 ▾</span>
+      <div class="art-detail" id="detail-${a.id}">
+        取得日：${esc(a.date)||'—'}<br>
+        取得元：${esc(a.source)||'—'}<br>
+        備考：${esc(a.memo)||'—'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function toggleDetail(id){ document.getElementById('detail-'+id).classList.toggle('open'); }
+
+// ===== STATUS / NOTE UPDATE =====
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function setStatus(id, st) {
+  const all = loadAll();
+  const a = all.find(x=>x.id===id); if(!a) return;
+  a.status = st; a.lastCheck = todayISO();
+  saveAll(all); render();
+}
+function setNote(id, val) {
+  const all = loadAll();
+  const a = all.find(x=>x.id===id); if(!a) return;
+  a.statusNote = val; a.lastCheck = todayISO();
+  saveAll(all);
+}
+
+// ===== ADD / EDIT =====
+function openAdd() {
+  document.getElementById('modal-title').textContent='作品登録';
+  ['f-id','f-no','f-title','f-artist','f-size','f-value','f-date','f-source','f-memo'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-place').value = currentTab==='storage'?'倉庫':'展示中';
+  document.getElementById('f-tech').value='油彩';
+  document.getElementById('modal-delete').style.display='none';
+  document.getElementById('modal').classList.add('open');
+}
+function openEdit(id) {
+  const a = loadAll().find(x=>x.id===id); if(!a) return;
+  document.getElementById('modal-title').textContent='作品を編集';
+  document.getElementById('f-id').value=a.id;
+  document.getElementById('f-no').value=a.no||'';
+  document.getElementById('f-title').value=a.title||'';
+  document.getElementById('f-artist').value=a.artist||'';
+  document.getElementById('f-tech').value=a.tech||'油彩';
+  document.getElementById('f-size').value=a.size||'';
+  document.getElementById('f-value').value=a.value||'';
+  document.getElementById('f-date').value=a.date||'';
+  document.getElementById('f-source').value=a.source||'';
+  document.getElementById('f-place').value=a.place||'展示中';
+  document.getElementById('f-memo').value=a.memo||'';
+  document.getElementById('modal-delete').style.display='inline-block';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function deleteArt() {
+  const id = document.getElementById('f-id').value;
+  if (!id) return;
+  const all = loadAll();
+  const a = all.find(x=>x.id===id);
+  if (!confirm('「'+((a&&a.title)||'この作品')+'」を削除します。よろしいですか？')) return;
+  saveAll(all.filter(x=>x.id!==id));
+  closeModal(); render();
+}
+function saveArt() {
+  const all = loadAll();
+  const id = document.getElementById('f-id').value;
+  const data = {
+    no: document.getElementById('f-no').value.trim(),
+    title: document.getElementById('f-title').value.trim(),
+    artist: document.getElementById('f-artist').value.trim(),
+    tech: document.getElementById('f-tech').value,
+    size: document.getElementById('f-size').value.trim(),
+    value: document.getElementById('f-value').value,
+    date: document.getElementById('f-date').value,
+    source: document.getElementById('f-source').value.trim(),
+    place: document.getElementById('f-place').value,
+    memo: document.getElementById('f-memo').value.trim(),
+  };
+  if (!data.title && !data.no) { alert('作品番号または作品名を入力してください'); return; }
+  if (id) {
+    const a = all.find(x=>x.id===id);
+    Object.assign(a, data);
+  } else {
+    all.push(Object.assign({ id:'a'+Date.now(), status:'良', statusNote:'', lastCheck:'' }, data));
+  }
+  saveAll(all); closeModal(); render();
+}
+
+// ===== CSV =====
+function toggleCsv(){ document.getElementById('csv-panel').classList.toggle('open'); }
+function resetAll() {
+  const n = loadAll().length;
+  if (n===0) { alert('削除するデータがありません'); return; }
+  if (!confirm('登録されている全'+n+'件を削除します。よろしいですか？')) return;
+  if (!confirm('本当に削除してよいですか？この操作は取り消せません。')) return;
+  localStorage.removeItem(KEY);
+  render();
+  alert('全データを削除しました');
+}
+function exportCsv() {
+  const all = loadAll();
+  const head = ['作品番号','作品名','作者','技法','サイズ','評価額','取得日','取得元','設置場所','状態','状態メモ','最終点検'];
+  const rows = all.map(a=>[a.no,a.title,a.artist,a.tech,a.size,a.value,a.date,a.source,a.place,a.status,a.statusNote,a.lastCheck]
+    .map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF'+[head.join(','),...rows].join('\r\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href=url; link.download='kaiga_'+todayISO()+'.csv'; link.click();
+  URL.revokeObjectURL(url);
+}
+function parseCsvLine(line){
+  const out=[]; let cur=''; let q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c==='"')q=true; else if(c===','){out.push(cur);cur='';} else cur+=c; }
+  }
+  out.push(cur); return out;
+}
+// CSV全体を行（レコード）配列に分割。クオート内の改行は行区切りにしない。
+function parseCsv(text){
+  text = text.replace(/^\uFEFF/,'');   // BOM除去
+  const rows=[]; let cur=''; let q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='""';i++;} else { q=false; cur+='"'; } }
+      else cur+=c;
+    } else {
+      if(c==='"'){ q=true; cur+='"'; }
+      else if(c==='\n'){ rows.push(cur); cur=''; }
+      else if(c==='\r'){ /* skip CR */ }
+      else cur+=c;
+    }
+  }
+  if(cur.trim()!=='') rows.push(cur);
+  return rows.filter(r=>r.trim()!=='');
+}
+function importCsv() {
+  const txt = document.getElementById('csv-text').value.trim();
+  if(!txt){ alert('CSVを貼り付けてください'); return; }
+  doImport(txt);
+}
+function importCsvFile(ev) {
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { doImport(e.target.result); ev.target.value=''; };
+  reader.onerror = () => alert('ファイルの読み込みに失敗しました');
+  reader.readAsText(file, 'UTF-8');
+}
+function doImport(txt) {
+  const lines = parseCsv(txt.trim());
+  if(lines.length<2){ alert('データ行がありません（認識した行数: '+lines.length+'）'); return; }
+  const all = loadAll();
+  let added=0;
+  for(let i=1;i<lines.length;i++){
+    const c = parseCsvLine(lines[i]);
+    if(c.length<2 || (!c[0] && !c[1])) continue;
+    all.push({
+      id:'a'+Date.now()+'_'+i, no:(c[0]||'').trim(), title:(c[1]||'').trim(),
+      artist:(c[2]||'').trim(), tech:(c[3]||'その他').trim(), size:(c[4]||'').trim(),
+      value:(c[5]||'').replace(/[^\d]/g,''), date:(c[6]||'').trim(), source:(c[7]||'').trim(),
+      place:((c[8]||'').includes('倉庫')?'倉庫':'展示中'),
+      memo:(c[9]||'').trim(),
+      status:'良', statusNote:'', lastCheck:''
+    });
+    added++;
+  }
+  saveAll(all);
+  document.getElementById('csv-text').value='';
+  alert('認識した行数: '+lines.length+'（見出し含む）\n取り込んだ作品: '+added+'件');
+  render();
+}
+
+// ===== INIT =====
+seedIfEmpty();
+render();
+</script>
+</body>
+</html>
