@@ -117,6 +117,17 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .art-detail { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--gray-light); font-size: 0.74rem; color: var(--text); line-height: 1.7; }
 .art-detail.open { display: block; }
 
+/* PHOTO */
+.art-thumb { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; border: 1px solid var(--gray-light); cursor: pointer; flex-shrink: 0; background: var(--bg); }
+.art-head-left { display: flex; gap: 10px; align-items: flex-start; }
+.photo-preview { margin-top: 8px; }
+.photo-preview img { max-width: 120px; max-height: 120px; border-radius: 6px; border: 1px solid var(--gray-light); display: block; }
+.photo-actions { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 95%; max-height: 90%; border-radius: 8px; }
+.lightbox .close-x { position: absolute; top: 16px; right: 20px; color: white; font-size: 2rem; cursor: pointer; }
+
 /* MODAL */
 .modal-bg {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
@@ -144,9 +155,51 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .csv-panel.open { display:block; }
 .csv-panel textarea { width:100%; min-height:120px; font-family:monospace; font-size:0.75rem; padding:8px; border:1px solid var(--gray-light); border-radius:6px; }
 .csv-panel .hint { font-size:0.72rem; color:var(--gray); margin:8px 0; line-height:1.6; }
+/* ===== PASSPHRASE GATE ===== */
+#gate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+#gate-box {
+  background: var(--white); border-radius: 12px; padding: 32px 24px;
+  width: 100%; max-width: 360px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3); border-top: 4px solid var(--gold);
+}
+#gate-box .gate-logo { font-size: 2rem; margin-bottom: 8px; }
+#gate-box h1 { font-size: 1.1rem; color: var(--navy); margin-bottom: 4px; }
+#gate-box h1 span { color: var(--gold); }
+#gate-box p { font-size: 0.78rem; color: var(--gray); margin-bottom: 20px; }
+#gate-box input {
+  width: 100%; padding: 11px 12px; border: 1px solid var(--gray-light);
+  border-radius: 6px; font-size: 0.95rem; text-align: center; margin-bottom: 12px;
+}
+#gate-box input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(26,39,68,0.1); }
+#gate-box button {
+  width: 100%; padding: 11px; background: var(--navy); color: white;
+  border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+}
+#gate-box button:hover { background: var(--navy-light); }
+#gate-error { color: var(--red); font-size: 0.78rem; margin-top: 10px; min-height: 18px; }
+body.locked { overflow: hidden; }
+body.locked #app-root { display: none; }
 </style>
 </head>
-<body>
+<body class="locked">
+
+<!-- ===== PASSPHRASE GATE ===== -->
+<div id="gate">
+  <div id="gate-box">
+    <div class="gate-logo">🖼️</div>
+    <h1>天海の城 <span>絵画管理</span></h1>
+    <p>合言葉を入力してください</p>
+    <input type="password" id="gate-input" placeholder="合言葉" autocomplete="off">
+    <button onclick="checkGate()">入室する</button>
+    <div id="gate-error"></div>
+  </div>
+</div>
+
+<div id="app-root">
 
 <div id="header">
   <div id="header-top">
@@ -182,6 +235,10 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
       <button class="btn btn-gold btn-sm" onclick="importCsv()">貼り付けて取込</button>
       <button class="btn btn-sm" style="background:var(--red);color:white" onclick="resetAll()">全データ削除</button>
     </div>
+    <div style="margin-bottom:10px;padding:10px;background:var(--bg);border-radius:6px">
+      <div style="font-size:0.74rem;font-weight:700;color:var(--navy);margin-bottom:6px">▼ ファイルから直接取り込む（おすすめ・確実）</div>
+      <input type="file" id="csv-file" accept=".csv,text/csv" onchange="importCsvFile(event)" style="font-size:0.78rem">
+    </div>
     <textarea id="csv-text" placeholder="ここにCSVを貼り付け..."></textarea>
   </div>
 
@@ -213,6 +270,16 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
       <div class="form-row"><label>取得日</label><input id="f-date" type="date"></div>
       <div class="form-row"><label>取得元</label><input id="f-source" placeholder="例 ○○画廊"></div>
     </div>
+    <div class="form-row">
+      <label>現状写真</label>
+      <input type="file" id="f-photo" accept="image/*" onchange="onPhotoPick(event)" style="font-size:0.8rem">
+      <div class="photo-preview" id="photo-preview" style="display:none">
+        <img id="photo-preview-img" src="" alt="">
+        <div class="photo-actions">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="removePhoto()">写真を削除</button>
+        </div>
+      </div>
+    </div>
     <div class="form-row"><label>備考</label><textarea id="f-memo" rows="2" placeholder="額装の状態、来歴など"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-sm" id="modal-delete" style="background:var(--red);color:white;display:none;margin-right:auto" onclick="deleteArt()">削除</button>
@@ -222,11 +289,106 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
   </div>
 </div>
 
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="close-x">×</span>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+</div><!-- /app-root -->
+
 <script>
+// ===== PASSPHRASE GATE =====
+const PASSPHRASE = "tenkai2026";  // ← ここを好きな合言葉に変更してください
+const GATE_KEY = "kaiga_gate_ok";
+function checkGate() {
+  const val = document.getElementById('gate-input').value.trim();
+  if (val === PASSPHRASE) {
+    sessionStorage.setItem(GATE_KEY, "1");
+    unlockApp();
+  } else {
+    document.getElementById('gate-error').textContent = "合言葉が違います";
+    document.getElementById('gate-input').value = "";
+  }
+}
+function unlockApp() {
+  document.body.classList.remove('locked');
+  const gate = document.getElementById('gate');
+  if (gate) gate.style.display = 'none';
+}
+if (sessionStorage.getItem(GATE_KEY) === "1") {
+  unlockApp();
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('gate-input');
+    if (inp) {
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkGate(); });
+      inp.focus();
+    }
+  });
+}
+
 // ===== STORAGE =====
 const KEY = 'tenkai_kaiga';
 function loadAll() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } }
-function saveAll(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
+function saveAll(arr) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(arr));
+    return true;
+  } catch(e) {
+    alert('保存できませんでした。写真の枚数が多すぎて容量上限に達した可能性があります。\n不要な写真を削除するか、画像なしで運用してください。');
+    return false;
+  }
+}
+
+// ===== PHOTO (圧縮して保持) =====
+let pendingPhoto = undefined;  // undefined=変更なし, ''=削除, 'data:...'=新規
+function onPhotoPick(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      // 長辺640pxに縮小してJPEG圧縮
+      const max = 640;
+      let w = img.width, h = img.height;
+      if (w > h && w > max) { h = h*max/w; w = max; }
+      else if (h >= w && h > max) { w = w*max/h; h = max; }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = cv.toDataURL('image/jpeg', 0.7);
+      pendingPhoto = dataUrl;
+      showPhotoPreview(dataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function showPhotoPreview(src) {
+  const box = document.getElementById('photo-preview');
+  if (src) {
+    document.getElementById('photo-preview-img').src = src;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
+function removePhoto() {
+  pendingPhoto = '';
+  document.getElementById('f-photo').value = '';
+  showPhotoPreview('');
+}
+function openLightbox(id) {
+  const a = loadAll().find(x=>x.id===id);
+  if (!a || !a.photo) return;
+  document.getElementById('lightbox-img').src = a.photo;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
 
 // ===== SAMPLE DATA (初回のみ) =====
 function seedIfEmpty() {
@@ -306,10 +468,15 @@ function render() {
     return `
     <div class="art-card s-${cls}">
       <div class="art-head">
-        <div>
-          <span class="art-title">${esc(a.title)||'（無題）'}<span class="art-no">${esc(a.no)||''}</span></span>
-          <div class="art-meta">${esc(a.artist)||'作者不明'}<span class="sep">|</span>${esc(a.tech)||''}<span class="sep">|</span>${esc(a.size)||''}</div>
-          ${a.value?`<div class="art-val">評価額 ¥${Number(a.value).toLocaleString()}</div>`:''}
+        <div class="art-head-left">
+          ${a.photo
+            ? `<img class="art-thumb" src="${a.photo}" onclick="openLightbox('${a.id}')" alt="">`
+            : `<div class="art-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:1.4rem">🖼️</div>`}
+          <div>
+            <span class="art-title">${esc(a.title)||'（無題）'}<span class="art-no">${esc(a.no)||''}</span></span>
+            <div class="art-meta">${esc(a.artist)||'作者不明'}<span class="sep">|</span>${esc(a.tech)||''}<span class="sep">|</span>${esc(a.size)||''}</div>
+            ${a.value?`<div class="art-val">評価額 ¥${Number(a.value).toLocaleString()}</div>`:''}
+          </div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="openEdit('${a.id}')">編集</button>
       </div>
@@ -358,6 +525,9 @@ function openAdd() {
   document.getElementById('f-place').value = currentTab==='storage'?'倉庫':'展示中';
   document.getElementById('f-tech').value='油彩';
   document.getElementById('modal-delete').style.display='none';
+  document.getElementById('f-photo').value='';
+  pendingPhoto = undefined;
+  showPhotoPreview('');
   document.getElementById('modal').classList.add('open');
 }
 function openEdit(id) {
@@ -375,6 +545,9 @@ function openEdit(id) {
   document.getElementById('f-place').value=a.place||'展示中';
   document.getElementById('f-memo').value=a.memo||'';
   document.getElementById('modal-delete').style.display='inline-block';
+  document.getElementById('f-photo').value='';
+  pendingPhoto = undefined;
+  showPhotoPreview(a.photo||'');
   document.getElementById('modal').classList.add('open');
 }
 function closeModal(){ document.getElementById('modal').classList.remove('open'); }
@@ -406,10 +579,13 @@ function saveArt() {
   if (id) {
     const a = all.find(x=>x.id===id);
     Object.assign(a, data);
+    if (pendingPhoto !== undefined) a.photo = pendingPhoto;  // '' なら削除、dataURLなら更新
   } else {
-    all.push(Object.assign({ id:'a'+Date.now(), status:'良', statusNote:'', lastCheck:'' }, data));
+    const obj = Object.assign({ id:'a'+Date.now(), status:'良', statusNote:'', lastCheck:'' }, data);
+    if (pendingPhoto) obj.photo = pendingPhoto;
+    all.push(obj);
   }
-  saveAll(all); closeModal(); render();
+  if (saveAll(all)) { closeModal(); render(); }
 }
 
 // ===== CSV =====
@@ -425,8 +601,8 @@ function resetAll() {
 }
 function exportCsv() {
   const all = loadAll();
-  const head = ['作品番号','作品名','作者','技法','サイズ','評価額','取得日','取得元','設置場所','状態','状態メモ','最終点検'];
-  const rows = all.map(a=>[a.no,a.title,a.artist,a.tech,a.size,a.value,a.date,a.source,a.place,a.status,a.statusNote,a.lastCheck]
+  const head = ['作品番号','作品名','作者','技法','サイズ','評価額','取得日','取得元','設置場所','状態','状態メモ','最終点検','写真'];
+  const rows = all.map(a=>[a.no,a.title,a.artist,a.tech,a.size,a.value,a.date,a.source,a.place,a.status,a.statusNote,a.lastCheck,(a.photo?'あり':'')]
     .map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF'+[head.join(','),...rows].join('\r\n');
   const blob = new Blob([csv],{type:'text/csv'});
@@ -444,11 +620,41 @@ function parseCsvLine(line){
   }
   out.push(cur); return out;
 }
+// CSV全体を行（レコード）配列に分割。クオート内の改行は行区切りにしない。
+function parseCsv(text){
+  text = text.replace(/^\uFEFF/,'');   // BOM除去
+  const rows=[]; let cur=''; let q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='""';i++;} else { q=false; cur+='"'; } }
+      else cur+=c;
+    } else {
+      if(c==='"'){ q=true; cur+='"'; }
+      else if(c==='\n'){ rows.push(cur); cur=''; }
+      else if(c==='\r'){ /* skip CR */ }
+      else cur+=c;
+    }
+  }
+  if(cur.trim()!=='') rows.push(cur);
+  return rows.filter(r=>r.trim()!=='');
+}
 function importCsv() {
   const txt = document.getElementById('csv-text').value.trim();
   if(!txt){ alert('CSVを貼り付けてください'); return; }
-  const lines = txt.split(/\r?\n/).filter(l=>l.trim());
-  if(lines.length<2){ alert('データ行がありません'); return; }
+  doImport(txt);
+}
+function importCsvFile(ev) {
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { doImport(e.target.result); ev.target.value=''; };
+  reader.onerror = () => alert('ファイルの読み込みに失敗しました');
+  reader.readAsText(file, 'UTF-8');
+}
+function doImport(txt) {
+  const lines = parseCsv(txt.trim());
+  if(lines.length<2){ alert('データ行がありません（認識した行数: '+lines.length+'）'); return; }
   const all = loadAll();
   let added=0;
   for(let i=1;i<lines.length;i++){
@@ -466,7 +672,7 @@ function importCsv() {
   }
   saveAll(all);
   document.getElementById('csv-text').value='';
-  alert(added+'件を取り込みました');
+  alert('認識した行数: '+lines.length+'（見出し含む）\n取り込んだ作品: '+added+'件');
   render();
 }
 
