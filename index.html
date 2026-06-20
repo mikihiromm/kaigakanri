@@ -117,17 +117,6 @@ body { font-family: 'Hiragino Sans', 'Meiryo', sans-serif; background: var(--bg)
 .art-detail { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--gray-light); font-size: 0.74rem; color: var(--text); line-height: 1.7; }
 .art-detail.open { display: block; }
 
-/* PHOTO */
-.art-thumb { width: 64px; height: 64px; border-radius: 6px; object-fit: cover; border: 1px solid var(--gray-light); cursor: pointer; flex-shrink: 0; background: var(--bg); }
-.art-head-left { display: flex; gap: 10px; align-items: flex-start; }
-.photo-preview { margin-top: 8px; }
-.photo-preview img { max-width: 120px; max-height: 120px; border-radius: 6px; border: 1px solid var(--gray-light); display: block; }
-.photo-actions { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
-.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-.lightbox.open { display: flex; }
-.lightbox img { max-width: 95%; max-height: 90%; border-radius: 8px; }
-.lightbox .close-x { position: absolute; top: 16px; right: 20px; color: white; font-size: 2rem; cursor: pointer; }
-
 /* MODAL */
 .modal-bg {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
@@ -270,16 +259,6 @@ body.locked #app-root { display: none; }
       <div class="form-row"><label>取得日</label><input id="f-date" type="date"></div>
       <div class="form-row"><label>取得元</label><input id="f-source" placeholder="例 ○○画廊"></div>
     </div>
-    <div class="form-row">
-      <label>現状写真</label>
-      <input type="file" id="f-photo" accept="image/*" onchange="onPhotoPick(event)" style="font-size:0.8rem">
-      <div class="photo-preview" id="photo-preview" style="display:none">
-        <img id="photo-preview-img" src="" alt="">
-        <div class="photo-actions">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="removePhoto()">写真を削除</button>
-        </div>
-      </div>
-    </div>
     <div class="form-row"><label>備考</label><textarea id="f-memo" rows="2" placeholder="額装の状態、来歴など"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-sm" id="modal-delete" style="background:var(--red);color:white;display:none;margin-right:auto" onclick="deleteArt()">削除</button>
@@ -287,12 +266,6 @@ body.locked #app-root { display: none; }
       <button class="btn btn-navy" id="modal-save" onclick="saveArt()">保存</button>
     </div>
   </div>
-</div>
-
-<!-- LIGHTBOX -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <span class="close-x">×</span>
-  <img id="lightbox-img" src="" alt="">
 </div>
 
 </div><!-- /app-root -->
@@ -331,64 +304,7 @@ if (sessionStorage.getItem(GATE_KEY) === "1") {
 // ===== STORAGE =====
 const KEY = 'tenkai_kaiga';
 function loadAll() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } }
-function saveAll(arr) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(arr));
-    return true;
-  } catch(e) {
-    alert('保存できませんでした。写真の枚数が多すぎて容量上限に達した可能性があります。\n不要な写真を削除するか、画像なしで運用してください。');
-    return false;
-  }
-}
-
-// ===== PHOTO (圧縮して保持) =====
-let pendingPhoto = undefined;  // undefined=変更なし, ''=削除, 'data:...'=新規
-function onPhotoPick(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      // 長辺640pxに縮小してJPEG圧縮
-      const max = 640;
-      let w = img.width, h = img.height;
-      if (w > h && w > max) { h = h*max/w; w = max; }
-      else if (h >= w && h > max) { w = w*max/h; h = max; }
-      const cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = cv.toDataURL('image/jpeg', 0.7);
-      pendingPhoto = dataUrl;
-      showPhotoPreview(dataUrl);
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function showPhotoPreview(src) {
-  const box = document.getElementById('photo-preview');
-  if (src) {
-    document.getElementById('photo-preview-img').src = src;
-    box.style.display = 'block';
-  } else {
-    box.style.display = 'none';
-  }
-}
-function removePhoto() {
-  pendingPhoto = '';
-  document.getElementById('f-photo').value = '';
-  showPhotoPreview('');
-}
-function openLightbox(id) {
-  const a = loadAll().find(x=>x.id===id);
-  if (!a || !a.photo) return;
-  document.getElementById('lightbox-img').src = a.photo;
-  document.getElementById('lightbox').classList.add('open');
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-}
+function saveAll(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
 
 // ===== SAMPLE DATA (初回のみ) =====
 function seedIfEmpty() {
@@ -468,15 +384,10 @@ function render() {
     return `
     <div class="art-card s-${cls}">
       <div class="art-head">
-        <div class="art-head-left">
-          ${a.photo
-            ? `<img class="art-thumb" src="${a.photo}" onclick="openLightbox('${a.id}')" alt="">`
-            : `<div class="art-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:1.4rem">🖼️</div>`}
-          <div>
-            <span class="art-title">${esc(a.title)||'（無題）'}<span class="art-no">${esc(a.no)||''}</span></span>
-            <div class="art-meta">${esc(a.artist)||'作者不明'}<span class="sep">|</span>${esc(a.tech)||''}<span class="sep">|</span>${esc(a.size)||''}</div>
-            ${a.value?`<div class="art-val">評価額 ¥${Number(a.value).toLocaleString()}</div>`:''}
-          </div>
+        <div>
+          <span class="art-title">${esc(a.title)||'（無題）'}<span class="art-no">${esc(a.no)||''}</span></span>
+          <div class="art-meta">${esc(a.artist)||'作者不明'}<span class="sep">|</span>${esc(a.tech)||''}<span class="sep">|</span>${esc(a.size)||''}</div>
+          ${a.value?`<div class="art-val">評価額 ¥${Number(a.value).toLocaleString()}</div>`:''}
         </div>
         <button class="btn btn-ghost btn-sm" onclick="openEdit('${a.id}')">編集</button>
       </div>
@@ -525,9 +436,6 @@ function openAdd() {
   document.getElementById('f-place').value = currentTab==='storage'?'倉庫':'展示中';
   document.getElementById('f-tech').value='油彩';
   document.getElementById('modal-delete').style.display='none';
-  document.getElementById('f-photo').value='';
-  pendingPhoto = undefined;
-  showPhotoPreview('');
   document.getElementById('modal').classList.add('open');
 }
 function openEdit(id) {
@@ -545,9 +453,6 @@ function openEdit(id) {
   document.getElementById('f-place').value=a.place||'展示中';
   document.getElementById('f-memo').value=a.memo||'';
   document.getElementById('modal-delete').style.display='inline-block';
-  document.getElementById('f-photo').value='';
-  pendingPhoto = undefined;
-  showPhotoPreview(a.photo||'');
   document.getElementById('modal').classList.add('open');
 }
 function closeModal(){ document.getElementById('modal').classList.remove('open'); }
@@ -579,13 +484,10 @@ function saveArt() {
   if (id) {
     const a = all.find(x=>x.id===id);
     Object.assign(a, data);
-    if (pendingPhoto !== undefined) a.photo = pendingPhoto;  // '' なら削除、dataURLなら更新
   } else {
-    const obj = Object.assign({ id:'a'+Date.now(), status:'良', statusNote:'', lastCheck:'' }, data);
-    if (pendingPhoto) obj.photo = pendingPhoto;
-    all.push(obj);
+    all.push(Object.assign({ id:'a'+Date.now(), status:'良', statusNote:'', lastCheck:'' }, data));
   }
-  if (saveAll(all)) { closeModal(); render(); }
+  saveAll(all); closeModal(); render();
 }
 
 // ===== CSV =====
@@ -601,8 +503,8 @@ function resetAll() {
 }
 function exportCsv() {
   const all = loadAll();
-  const head = ['作品番号','作品名','作者','技法','サイズ','評価額','取得日','取得元','設置場所','状態','状態メモ','最終点検','写真'];
-  const rows = all.map(a=>[a.no,a.title,a.artist,a.tech,a.size,a.value,a.date,a.source,a.place,a.status,a.statusNote,a.lastCheck,(a.photo?'あり':'')]
+  const head = ['作品番号','作品名','作者','技法','サイズ','評価額','取得日','取得元','設置場所','状態','状態メモ','最終点検'];
+  const rows = all.map(a=>[a.no,a.title,a.artist,a.tech,a.size,a.value,a.date,a.source,a.place,a.status,a.statusNote,a.lastCheck]
     .map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF'+[head.join(','),...rows].join('\r\n');
   const blob = new Blob([csv],{type:'text/csv'});
